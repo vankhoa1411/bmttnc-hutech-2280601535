@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vigenere Cipher Tool</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <style>
+    body { background: #f8f9fa; padding: 30px; }
+    .cipher-box { background: white; border-radius: 10px; padding: 30px; box-shadow: 0 3px 15px rgba(0,0,0,0.2); max-width: 600px; margin: auto; }
+    .result-area { background: #e9ecef; border-radius: 5px; padding: 15px; white-space: pre-wrap; min-height: 120px; font-family: monospace; margin-top: 20px; font-size: 1.1rem; }
+    .toggle-buttons { display: flex; margin-bottom: 15px; }
+    .toggle-buttons button {
+      flex: 1; border-radius: 0; border: 1px solid #007bff; background: white; color: #007bff;
+      font-weight: 600; padding: 10px; cursor: pointer; transition: background-color 0.3s, color 0.3s;
+    }
+    .toggle-buttons button:first-child { border-top-left-radius: 5px; border-bottom-left-radius: 5px; }
+    .toggle-buttons button:last-child { border-top-right-radius: 5px; border-bottom-right-radius: 5px; border-left: none; }
+    .toggle-buttons button.active {
+      background: #007bff; color: white; font-weight: 700; box-shadow: 0 0 8px rgba(0,123,255,0.6);
+    }
+    .form-group label { font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="container cipher-box">
+  <h2 class="text-center mb-4">Vigenere Cipher Encoder/Decoder</h2>
+
+  <div class="toggle-buttons" role="group" aria-label="Encrypt or Decrypt toggle">
+    <button type="button" id="btnEncrypt" class="active" aria-pressed="true">Encrypt</button>
+    <button type="button" id="btnDecrypt" aria-pressed="false">Decrypt</button>
+  </div>
+
+  <form id="vigenereForm" autocomplete="off">
+    <div class="form-group">
+      <label for="keyInput">Key (Text):</label>
+      <input type="text" class="form-control" id="keyInput" name="inputKeyPlain" placeholder="Enter key" required />
+    </div>
+
+    <div class="form-group">
+      <label for="textInput">Input Text:</label>
+      <textarea class="form-control" id="textInput" name="inputPlainText" rows="4" placeholder="Enter plaintext or ciphertext" required></textarea>
+    </div>
+  </form>
+
+  <h4>Result:</h4>
+  <div class="result-area" id="resultArea">Start typing to see results...</div>
+</div>
+
+<script>
+  const btnEncrypt = document.getElementById('btnEncrypt');
+  const btnDecrypt = document.getElementById('btnDecrypt');
+  const keyInput = document.getElementById('keyInput');
+  const textInput = document.getElementById('textInput');
+  const resultArea = document.getElementById('resultArea');
+
+  let mode = 'encrypt';
+
+  function setMode(newMode) {
+    mode = newMode;
+    if (mode === 'encrypt') {
+      btnEncrypt.classList.add('active');
+      btnEncrypt.setAttribute('aria-pressed', 'true');
+      btnDecrypt.classList.remove('active');
+      btnDecrypt.setAttribute('aria-pressed', 'false');
+    } else {
+      btnDecrypt.classList.add('active');
+      btnDecrypt.setAttribute('aria-pressed', 'true');
+      btnEncrypt.classList.remove('active');
+      btnEncrypt.setAttribute('aria-pressed', 'false');
+    }
+    triggerCipher();
+  }
+
+  btnEncrypt.addEventListener('click', () => setMode('encrypt'));
+  btnDecrypt.addEventListener('click', () => setMode('decrypt'));
+
+  function triggerCipher() {
+    const key = keyInput.value.trim();
+    const text = textInput.value.trim();
+
+    if (!key || !text) {
+      resultArea.textContent = 'Please enter both Key and Text.';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('inputKeyPlain', key);
+
+    if (mode === 'encrypt') {
+      formData.append('inputPlainText', text);
+    } else {
+      formData.append('inputCipherText', text);
+    }
+
+    fetch(`/vigenere/${mode}`, {
+      method: 'POST',
+      body: formData,
+    })
+      .then(resp => resp.text())
+      .then(data => {
+        resultArea.textContent = data.replace(/<br\s*\/?>/gi, '\n');
+      })
+      .catch(err => {
+        resultArea.textContent = 'Error: ' + err.message;
+      });
+  }
+
+  keyInput.addEventListener('input', debounce(triggerCipher, 500));
+  textInput.addEventListener('input', debounce(triggerCipher, 500));
+
+  function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+  }
+
+  setMode('encrypt');
+</script>
+
+</body>
+</html>
